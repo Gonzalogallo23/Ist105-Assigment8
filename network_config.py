@@ -5,7 +5,7 @@ import ipaddress
 
 # Define subnets
 IPV4_SUBNET = "192.168.1.0/24"
-IPV6_SUBNET = "2001:db8::/64"
+IPV6_SUBNET = "2001:db8::"  # Quitamos /64 para asegurar la correcta concatenación
 
 # Lease database to track assigned IPs
 lease_db = {}
@@ -16,14 +16,22 @@ def is_valid_mac(mac):
 
 # Generate IPv6 address using EUI-64
 def generate_ipv6(mac):
-    mac = mac.replace(":", "")
-    mac = mac[:6] + "fffe" + mac[6:]  # Insert "fffe" in the middle
+    mac = mac.lower().replace(":", "")
+
+    # Insert "fffe" in the middle to form EUI-64
+    mac = mac[:6] + "fffe" + mac[6:]
+
+    # Convert MAC string to a list of bytes
     mac_bytes = bytearray.fromhex(mac)
 
-    # Flip the 7th bit
-    mac_bytes[0] = mac_bytes[0] ^ 0x02
+    # Flip the 7th bit of the first byte (modified EUI-64 rule)
+    mac_bytes[0] ^= 0x02
+
+    # Convert to IPv6 format
     ipv6_suffix = ":".join(f"{mac_bytes[i]:02x}{mac_bytes[i+1]:02x}" for i in range(0, len(mac_bytes), 2))
-    return f"{IPV6_SUBNET.rstrip('0')}:{ipv6_suffix}"
+
+    # Ensure proper IPv6 format
+    return f"{IPV6_SUBNET}{ipv6_suffix}"
 
 # Assign an IPv4 address from the subnet
 def assign_ipv4():
